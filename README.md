@@ -404,6 +404,18 @@ python benchmark.py
 
 ---
 
+## 📈 Roadmap
+
+- [ ] Dashboard web em tempo real
+- [ ] Integração com Kubernetes (sidecar)
+- [ ] Suporte para múltiplos LLMs (ensemble)
+- [ ] Sistema de recompensa para aprendizado RL
+- [ ] Análise de memória e estado interno da IA
+- [ ] Blockchain para logs imutáveis
+- [ ] Honeypot de ações para detectar probing
+- [ ] Federated monitoring entre múltiplos S.H.I.E.L.D.
+
+---
 
 ## 🤝 Contribuindo
 
@@ -422,13 +434,22 @@ MIT License - veja `LICENSE` para detalhes
 
 ---
 
+## 🙏 Agradecimentos
 
+Inspirado por:
+- Anthropic Constitutional AI
+- OpenAI Superalignment
+- DeepMind's Scalable Oversight
+- Berkeley CHAI (Center for Human-Compatible AI)
 
 ---
 
 ## 📞 Contato
 
-Para questões de segurança críticas, entre em contato imediatamente: ghost.sytems@gmail.com
+Para questões de segurança críticas, entre em contato imediatamente.
 
 **⚠️ AVISO**: Este sistema não substitui supervisão humana adequada. É uma camada adicional de segurança, não a única linha de defesa.
 
+---
+
+**Made with 🛡️ for safer AI systems**

@@ -1,0 +1,114 @@
+# S.H.I.E.L.D. Configuration File
+# Copie este arquivo e ajuste conforme necessário
+
+{
+  "perimeter": {
+    "max_api_calls_per_minute": 100,
+    "max_memory_mb": 1024,
+    "max_cpu_percent": 80,
+    "allowed_domains": [
+      "api.openai.com",
+      "api.anthropic.com",
+      "huggingface.co"
+    ],
+    "blocked_domains": [
+      "malicious.com",
+      "pastebin.com",
+      "suspicious-site.net"
+    ],
+    "enable_network_monitoring": true,
+    "enable_resource_monitoring": true
+  },
+  
+  "heuristics": {
+    "anomaly_threshold": 0.7,
+    "pattern_window_size": 100,
+    "learning_rate": 0.01,
+    "enable_adaptive_learning": true,
+    "baseline_actions_required": 100,
+    "suspicious_patterns": {
+      "privilege_escalation": {
+        "enabled": true,
+        "weight": 0.9
+      },
+      "data_exfiltration": {
+        "enabled": true,
+        "weight": 0.85
+      },
+      "lateral_movement": {
+        "enabled": true,
+        "weight": 0.8
+      },
+      "reconnaissance": {
+        "enabled": true,
+        "weight": 0.7
+      }
+    }
+  },
+  
+  "oracle": {
+    "llm_model": "llama3.2:latest",
+    "llm_endpoint": "http://localhost:11434",
+    "analysis_timeout": 30,
+    "min_confidence": 0.6,
+    "enable_chain_of_thought": true,
+    "enable_caching": true,
+    "cache_ttl_seconds": 3600,
+    "analyses": {
+      "intent_analysis": {
+        "enabled": true,
+        "temperature": 0.3
+      },
+      "goal_alignment": {
+        "enabled": true,
+        "temperature": 0.2
+      },
+      "deception_check": {
+        "enabled": true,
+        "temperature": 0.1
+      }
+    }
+  },
+  
+  "enforcement": {
+    "auto_block_threshold": 3,
+    "auto_kill_threshold": 4,
+    "require_human_approval": true,
+    "quarantine_duration_seconds": 3600,
+    "escalation_policy": {
+      "SAFE": "allow",
+      "SUSPICIOUS": "log",
+      "CONCERNING": "require_approval",
+      "DANGEROUS": "quarantine",
+      "CRITICAL": "kill"
+    },
+    "notifications": {
+      "email": {
+        "enabled": false,
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "recipients": ["admin@example.com"]
+      },
+      "slack": {
+        "enabled": false,
+        "webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+      }
+    }
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "file": "logs/shield.log",
+    "max_size_mb": 100,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  
+  "monitoring": {
+    "enable_metrics": true,
+    "metrics_port": 9090,
+    "export_prometheus": false,
+    "dashboard_enabled": false,
+    "dashboard_port": 8080
+  }
+}

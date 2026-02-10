@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Ghost
+Copyright (c) 2026 S.H.I.E.L.D. Project Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+DISCLAIMER: This software is designed to assist in monitoring and containing
+autonomous AI systems. It is provided as a security tool and should be used
+as part of a comprehensive AI safety strategy. The authors and contributors
+make no warranties about the effectiveness of this system in preventing all
+possible AI safety incidents. Human oversight and supervision remain essential
+for AI safety.
