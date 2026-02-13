@@ -27,9 +27,11 @@ class OracleAnalyzer:
         self.analysis_timeout = config.get('analysis_timeout', 30)
         self.min_confidence = config.get('min_confidence', 0.6)
         self.enable_cot = config.get('enable_chain_of_thought', True)
-        
+        self.enable_caching = config.get('enable_caching', True)
+        self.cache_ttl_seconds = config.get('cache_ttl_seconds', 3600)
+
         # Cache de análises para ações similares
-        self.analysis_cache: Dict[str, ThreatAssessment] = {}
+        self.analysis_cache: Dict[str, Dict] = {}
         
         # Histórico de intenções detectadas
         self.intent_history: List[Dict] = []
@@ -139,11 +141,15 @@ JSON de resposta:
         self.logger.info(f"Oracle analisando ação {action.action_id}")
         
         # Verifica cache primeiro
-        cache_key = self._generate_cache_key(action)
-        if cache_key in self.analysis_cache:
-            cached = self.analysis_cache[cache_key]
-            self.logger.info("Resultado retornado do cache")
-            return cached
+        cache_key = self._generate_cache_key(action, context)
+        if self.enable_caching and cache_key in self.analysis_cache:
+            cached_entry = self.analysis_cache[cache_key]
+            cache_age = time.time() - cached_entry.get('created_at', 0)
+            if cache_age <= self.cache_ttl_seconds:
+                self.logger.info("Resultado retornado do cache")
+                return cached_entry.get('assessment')
+
+            self.analysis_cache.pop(cache_key, None)
         
         # Análises em múltiplas dimensões
         analyses = {}
@@ -167,9 +173,12 @@ JSON de resposta:
         final_assessment = self._aggregate_oracle_results(action, analyses)
         
         # Cacheia resultado
-        if final_assessment:
-            self.analysis_cache[cache_key] = final_assessment
-            
+        if final_assessment and self.enable_caching:
+            self.analysis_cache[cache_key] = {
+                'assessment': final_assessment,
+                'created_at': time.time()
+            }
+
             # Registra no histórico
             self.intent_history.append({
                 'action_id': action.action_id,
@@ -319,7 +328,7 @@ AÇÃO A ANALISAR:
             "deception_detected": False,
             "deception_evidence": "",
             "threat_level": threat_level,
-            "confidence": 0.5,
+            "confidence": 0.65,
             "reasoning": "Análise baseada em regras (LLM indisponível)",
             "red_flags": red_flags
         }
@@ -414,13 +423,26 @@ AÇÃO A ANALISAR:
         else:
             return EnforcementAction.ALLOW
     
-    def _generate_cache_key(self, action: AIAction) -> str:
-        """Gera chave de cache para uma ação"""
-        # Cacheia baseado em tipo de ação e hash de parâmetros
+    def _generate_cache_key(self, action: AIAction, context: Optional[Dict] = None) -> str:
+        """Gera chave de cache semântica para uma ação."""
         import hashlib
-        param_str = json.dumps(action.parameters, sort_keys=True)
-        param_hash = hashlib.md5(param_str.encode()).hexdigest()
-        return f"{action.action_type.value}:{param_hash}"
+
+        semantic_payload = {
+            'action_type': action.action_type.value,
+            'parameters': action.parameters,
+            'description': action.description,
+            'reasoning': action.reasoning,
+            'agent_id': action.agent_id,
+            'context_recent_actions': [
+                {
+                    'action_type': a.get('action_type'),
+                    'description': a.get('description')
+                }
+                for a in (context or {}).get('recent_actions', [])[-3:]
+            ]
+        }
+        payload_str = json.dumps(semantic_payload, sort_keys=True, ensure_ascii=False)
+        return hashlib.sha256(payload_str.encode()).hexdigest()
     
     def get_analysis_stats(self) -> Dict:
         """Retorna estatísticas das análises Oracle"""

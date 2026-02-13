@@ -6,17 +6,59 @@ Demonstra monitoramento de IA autônoma com detecção de ameaças
 import time
 import uuid
 import json
+from pathlib import Path
 from shield_core import (
     SHIELDCore, AIAction, ActionType, ThreatLevel
 )
 from layer_perimeter import PerimeterDefense
 from layer_heuristics import HeuristicAnalyzer
 from layer_oracle import OracleAnalyzer
+from layer_local_ai import LocalAIGuardian
 
 
 def generate_action_id() -> str:
     """Gera ID único para uma ação"""
     return str(uuid.uuid4())[:8]
+
+
+def load_runtime_config() -> dict:
+    """Carrega config.json se existir; caso contrário usa defaults da demo."""
+    config_path = Path('config.json')
+    if config_path.exists():
+        with config_path.open('r', encoding='utf-8') as f:
+            return json.load(f)
+
+    return {
+        'perimeter': {
+            'max_api_calls_per_minute': 10,
+            'max_memory_mb': 512,
+            'max_cpu_percent': 70,
+            'blocked_domains': ['malicious.com', 'suspicious-pastebin.com']
+        },
+        'heuristics': {
+            'anomaly_threshold': 0.6,
+            'enable_adaptive_learning': True,
+            'baseline_actions_required': 30
+        },
+        'oracle': {
+            'llm_model': 'llama3.2:latest',
+            'llm_endpoint': 'http://localhost:11434',
+            'min_confidence': 0.5,
+            'always_analyze': False,
+            'min_escalation_level': 1,
+            'enable_caching': True,
+            'cache_ttl_seconds': 1800
+        },
+        'local_ai': {
+            'min_samples': 8,
+            'alert_threshold': 0.62,
+            'sensitivity': 2.0
+        },
+        'enforcement': {
+            'auto_block_threshold': 3,
+            'auto_kill_threshold': 4,
+        }
+    }
 
 
 class ExampleAIAgent:
@@ -285,38 +327,21 @@ def main():
     print("="*60)
     
     # Inicializa S.H.I.E.L.D.
-    config = {
-        'perimeter': {
-            'max_api_calls_per_minute': 10,  # Baixo para demonstração
-            'max_memory_mb': 512,
-            'max_cpu_percent': 70,
-            'blocked_domains': ['malicious.com', 'suspicious-pastebin.com']
-        },
-        'heuristics': {
-            'anomaly_threshold': 0.6,
-            'enable_adaptive_learning': True
-        },
-        'oracle': {
-            'llm_model': 'llama3.2:latest',
-            'llm_endpoint': 'http://localhost:11434',
-            'min_confidence': 0.5
-        },
-        'enforcement': {
-            'auto_block_threshold': 3,  # DANGEROUS
-            'auto_kill_threshold': 4,   # CRITICAL
-        }
-    }
-    
+    config = load_runtime_config()
+
     shield = SHIELDCore(config)
     
     # Integra as camadas de defesa
     perimeter = PerimeterDefense(config['perimeter'])
     heuristics = HeuristicAnalyzer(config['heuristics'])
     oracle = OracleAnalyzer(config['oracle'])
-    
+    local_ai_config = config.get('local_ai', {'min_samples': 8, 'alert_threshold': 0.62, 'sensitivity': 2.0})
+    local_ai = LocalAIGuardian(local_ai_config)
+
     # Registra callbacks
     shield.add_layer_callback('perimeter', perimeter.analyze)
     shield.add_layer_callback('heuristics', heuristics.analyze)
+    shield.add_layer_callback('oracle', local_ai.analyze)
     shield.add_layer_callback('oracle', oracle.analyze)
     
     # Inicia sistema

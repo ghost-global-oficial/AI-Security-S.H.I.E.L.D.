@@ -76,27 +76,27 @@ class HeuristicAnalyzer:
         return [
             {
                 'name': 'privilege_escalation',
-                'sequence': ['FILE_OPERATION', 'CODE_EXECUTION', 'SELF_MODIFICATION'],
+                'sequence': ['file_operation', 'code_execution', 'self_modification'],
                 'weight': 0.9
             },
             {
                 'name': 'data_exfiltration',
-                'sequence': ['FILE_OPERATION', 'FILE_OPERATION', 'NETWORK_REQUEST'],
+                'sequence': ['file_operation', 'file_operation', 'network_request'],
                 'weight': 0.85
             },
             {
                 'name': 'lateral_movement',
-                'sequence': ['AGENT_COMMUNICATION', 'CODE_EXECUTION', 'AGENT_COMMUNICATION'],
+                'sequence': ['agent_communication', 'code_execution', 'agent_communication'],
                 'weight': 0.8
             },
             {
                 'name': 'reconnaissance',
-                'sequence': ['API_CALL', 'API_CALL', 'FILE_OPERATION', 'NETWORK_REQUEST'],
+                'sequence': ['api_call', 'api_call', 'file_operation', 'network_request'],
                 'weight': 0.7
             },
             {
                 'name': 'resource_hoarding',
-                'sequence': ['RESOURCE_ALLOCATION', 'RESOURCE_ALLOCATION', 'RESOURCE_ALLOCATION'],
+                'sequence': ['resource_allocation', 'resource_allocation', 'resource_allocation'],
                 'weight': 0.75
             }
         ]
@@ -165,8 +165,9 @@ class HeuristicAnalyzer:
         profile['action_counts'][action.action_type.value] += 1
         profile['action_timings'][action.action_type.value].append(action.timestamp)
         
-        # Estabelece baseline após 100 ações
-        if profile['total_actions'] >= 100 and not profile['baseline_established']:
+        # Estabelece baseline após N ações (configurável)
+        baseline_required = self.config.get('baseline_actions_required', 100)
+        if profile['total_actions'] >= baseline_required and not profile['baseline_established']:
             profile['baseline_established'] = True
             self.logger.info(f"Baseline estabelecida para agente {action.agent_id}")
     
@@ -332,13 +333,13 @@ class HeuristicAnalyzer:
         
         # Define níveis de sensibilidade das ações
         sensitivity_levels = {
-            'API_CALL': 1,
-            'FILE_OPERATION': 2,
-            'NETWORK_REQUEST': 2,
-            'CODE_EXECUTION': 3,
-            'AGENT_COMMUNICATION': 2,
-            'RESOURCE_ALLOCATION': 2,
-            'SELF_MODIFICATION': 4
+            ActionType.API_CALL.value: 1,
+            ActionType.FILE_OPERATION.value: 2,
+            ActionType.NETWORK_REQUEST.value: 2,
+            ActionType.CODE_EXECUTION.value: 3,
+            ActionType.AGENT_COMMUNICATION.value: 2,
+            ActionType.RESOURCE_ALLOCATION.value: 2,
+            ActionType.SELF_MODIFICATION.value: 4
         }
         
         # Analisa últimas 10 ações

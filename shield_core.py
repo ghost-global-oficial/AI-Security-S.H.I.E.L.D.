@@ -156,7 +156,13 @@ class SHIELDCore:
                 'llm_endpoint': 'http://localhost:11434',
                 'analysis_timeout': 30,
                 'min_confidence': 0.6,
-                'enable_chain_of_thought': True
+                'enable_chain_of_thought': True,
+                'always_analyze': False,
+                'min_escalation_level': ThreatLevel.SUSPICIOUS.value,
+                'critical_action_types': [
+                    ActionType.SELF_MODIFICATION.value,
+                    ActionType.CODE_EXECUTION.value
+                ]
             },
             'enforcement': {
                 'auto_block_threshold': ThreatLevel.DANGEROUS.value,
@@ -204,13 +210,11 @@ class SHIELDCore:
         
         # Layer 2: HEURISTICS
         heuristics_assessment = self._run_layer_callbacks('heuristics', action)
-        
-        if heuristics_assessment and heuristics_assessment.threat_level.value >= ThreatLevel.CONCERNING.value:
-            # Escalate para Oracle se necessário
-            pass
-        
-        # Layer 3: ORACLE (análise de intenções)
-        oracle_assessment = self._run_layer_callbacks('oracle', action)
+
+        # Layer 3: ORACLE (análise de intenções) com escalonamento
+        oracle_assessment = None
+        if self._should_escalate_to_oracle(action, perimeter_assessment, heuristics_assessment):
+            oracle_assessment = self._run_layer_callbacks('oracle', action)
         
         # Determina a assessment final
         final_assessment = self._aggregate_assessments(
@@ -225,6 +229,34 @@ class SHIELDCore:
                 self.monitored_agents[action.agent_id]['threat_count'] += 1
         
         return final_assessment
+
+    def _should_escalate_to_oracle(
+        self,
+        action: AIAction,
+        perimeter_assessment: Optional[ThreatAssessment],
+        heuristics_assessment: Optional[ThreatAssessment]
+    ) -> bool:
+        """Decide se a ação deve escalar para análise Oracle."""
+        oracle_config = self.config.get('oracle', {})
+
+        if oracle_config.get('always_analyze', False):
+            return True
+
+        if action.action_type.value in oracle_config.get('critical_action_types', []):
+            return True
+
+        min_level = oracle_config.get('min_escalation_level', ThreatLevel.SUSPICIOUS.value)
+
+        candidate_levels = [
+            assessment.threat_level.value
+            for assessment in (perimeter_assessment, heuristics_assessment)
+            if assessment is not None
+        ]
+
+        if not candidate_levels:
+            return False
+
+        return max(candidate_levels) >= min_level
     
     def enforce_action(self, assessment: ThreatAssessment) -> bool:
         """Aplica enforcement baseado na avaliação de ameaça"""
