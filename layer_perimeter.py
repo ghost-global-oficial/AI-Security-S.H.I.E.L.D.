@@ -170,25 +170,26 @@ class PerimeterDefense:
         """Verifica acesso a domínios de rede"""
         if action.action_type != ActionType.NETWORK_REQUEST:
             return None
-        
+
         url = action.parameters.get('url', '')
         domain = self._extract_domain(url)
-        
-        # Verifica domínios bloqueados
-        blocked_domains = set(self.config.get('blocked_domains', []))
-        if domain in blocked_domains:
-            return ThreatAssessment(
-                action_id=action.action_id,
-                threat_level=ThreatLevel.DANGEROUS,
-                confidence=1.0,
-                reasons=[f"Acesso a domínio bloqueado: {domain}"],
-                recommended_action=EnforcementAction.BLOCK,
-                analysis_layer="perimeter"
-            )
-        
-        # Verifica whitelist se configurada
-        allowed_domains = self.config.get('allowed_domains', [])
-        if allowed_domains and domain not in allowed_domains:
+
+        # Verifica domínios bloqueados (incluindo subdomínios)
+        blocked_domains = [d.lower() for d in self.config.get('blocked_domains', [])]
+        for blocked in blocked_domains:
+            if self._domain_matches(domain, blocked):
+                return ThreatAssessment(
+                    action_id=action.action_id,
+                    threat_level=ThreatLevel.DANGEROUS,
+                    confidence=1.0,
+                    reasons=[f"Acesso a domínio bloqueado: {domain} (regra: {blocked})"],
+                    recommended_action=EnforcementAction.BLOCK,
+                    analysis_layer="perimeter"
+                )
+
+        # Verifica whitelist se configurada (aceita subdomínio de domínio permitido)
+        allowed_domains = [d.lower() for d in self.config.get('allowed_domains', [])]
+        if allowed_domains and not any(self._domain_matches(domain, allowed) for allowed in allowed_domains):
             return ThreatAssessment(
                 action_id=action.action_id,
                 threat_level=ThreatLevel.SUSPICIOUS,
@@ -200,7 +201,7 @@ class PerimeterDefense:
                 recommended_action=EnforcementAction.REQUIRE_APPROVAL,
                 analysis_layer="perimeter"
             )
-        
+
         # Detecta padrões suspeitos em URLs
         suspicious_patterns = ['eval(', 'exec(', 'base64', 'shell', 'cmd']
         for pattern in suspicious_patterns:
@@ -214,7 +215,7 @@ class PerimeterDefense:
                     recommended_action=EnforcementAction.SANDBOX,
                     analysis_layer="perimeter"
                 )
-        
+
         return None
     
     def _check_forbidden_patterns(self, action: AIAction) -> Optional[ThreatAssessment]:
@@ -301,10 +302,18 @@ class PerimeterDefense:
         )
     
     def _extract_domain(self, url: str) -> str:
-        """Extrai o domínio de uma URL"""
+        """Extrai e normaliza o domínio de uma URL"""
         from urllib.parse import urlparse
         parsed = urlparse(url)
-        return parsed.netloc or parsed.path.split('/')[0]
+        domain = (parsed.netloc or parsed.path.split('/')[0]).lower().rstrip('.')
+        return domain.split(':')[0]
+
+    def _domain_matches(self, domain: str, rule_domain: str) -> bool:
+        """Verifica se um domínio corresponde à regra (raiz ou subdomínio)."""
+        normalized_rule = rule_domain.lower().lstrip('*.').rstrip('.')
+        if domain == normalized_rule:
+            return True
+        return domain.endswith(f".{normalized_rule}")
     
     def _get_agent_cpu_usage(self, agent_id: str) -> float:
         """Obtém uso de CPU do agente (simulado)"""
